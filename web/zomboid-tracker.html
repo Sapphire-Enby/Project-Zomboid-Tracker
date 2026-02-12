@@ -1,0 +1,939 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Project Zomboid Skill Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #333;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+        }
+
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .status-bar {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+
+        .status-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255,255,255,0.2);
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 0.9em;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #4ade80;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.watching {
+            background: #4ade80;
+        }
+
+        .status-dot.loading {
+            background: #fbbf24;
+            animation: pulse 0.5s infinite;
+        }
+
+        .status-dot.stopped {
+            background: #f87171;
+            animation: none;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .upload-section {
+            padding: 30px;
+            text-align: center;
+            background: #f5f7fa;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .auto-load-controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .auto-load-controls button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.2s;
+        }
+
+        .auto-load-controls button.primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .auto-load-controls button.secondary {
+            background: #e0e0e0;
+            color: #333;
+        }
+
+        .auto-load-controls button:hover {
+            transform: translateY(-2px);
+        }
+
+        .auto-load-controls select {
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+        }
+
+        .file-drop-zone {
+            border: 3px dashed #667eea;
+            border-radius: 10px;
+            padding: 40px;
+            margin: 20px 0;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .file-drop-zone:hover,
+        .file-drop-zone.drag-over {
+            background: #f0f4ff;
+            border-color: #764ba2;
+        }
+
+        .file-drop-zone h3 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .file-drop-zone p {
+            color: #666;
+        }
+
+        #fileInput {
+            display: none;
+        }
+
+        .controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 30px;
+            background: #f5f7fa;
+        }
+
+        .control-group {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .control-group h3 {
+            margin-bottom: 15px;
+            color: #667eea;
+            font-size: 1.1em;
+        }
+
+        #characterSelect {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            margin-bottom: 10px;
+        }
+
+        .skill-categories label,
+        .skill-filters label {
+            display: block;
+            padding: 8px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .skill-categories label:hover,
+        .skill-filters label:hover {
+            background: #f0f0f0;
+            border-radius: 4px;
+        }
+
+        .skill-filters {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .skill-filters::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .skill-filters::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 4px;
+        }
+
+        .skill-filters::-webkit-scrollbar-thumb {
+            background: #888;
+            border-radius: 4px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            cursor: pointer;
+            transition: transform 0.2s;
+            margin-top: 10px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-danger {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+
+        .stats-panel {
+            padding: 30px;
+            background: white;
+        }
+
+        .current-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+
+        .stat-card h4 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+
+        .stat-card .value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .stat-card .label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .chart-container {
+            padding: 30px;
+            background: white;
+            min-height: 400px;
+        }
+
+        .info-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+
+        .last-update {
+            font-size: 0.9em;
+            opacity: 0.9;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Project Zomboid Skill Tracker</h1>
+            <p>Auto-Loading Dashboard</p>
+            <div class="status-bar">
+                <div class="status-item">
+                    <div class="status-dot" id="watchStatus"></div>
+                    <span id="watchStatusText">Stopped</span>
+                </div>
+                <div class="status-item">
+                    Last update: <span id="lastUpdate">Never</span>
+                </div>
+            </div>
+        </header>
+
+        <div class="upload-section">
+            <div class="auto-load-controls">
+                <button id="startWatchBtn" class="primary">Start Watching</button>
+                <button id="stopWatchBtn" class="secondary">Stop</button>
+                <button id="manualLoadBtn" class="secondary">Load Now</button>
+                <select id="pollInterval">
+                    <option value="5000">Check every 5s</option>
+                    <option value="10000" selected>Check every 10s</option>
+                    <option value="30000">Check every 30s</option>
+                    <option value="60000">Check every 60s</option>
+                </select>
+            </div>
+
+            <div class="file-drop-zone" id="dropZone">
+                <h3>Manual Upload (Fallback)</h3>
+                <p>Drag & drop your <strong>playerdata.json</strong> file here</p>
+                <p>or click to browse</p>
+            </div>
+            <input type="file" id="fileInput" accept=".json">
+        </div>
+
+        <div class="controls">
+            <div class="control-group">
+                <h3>Character Selection</h3>
+                <select id="characterSelect" multiple size="5">
+                    <option value="">No characters loaded yet</option>
+                </select>
+                <label>
+                    <input type="checkbox" id="comparisonMode">
+                    Comparison Mode (multiple characters)
+                </label>
+            </div>
+
+            <div class="control-group">
+                <h3>Skill Categories</h3>
+                <div class="skill-categories">
+                    <label><input type="checkbox" class="category-filter" value="combat" checked> Combat</label>
+                    <label><input type="checkbox" class="category-filter" value="firearm" checked> Firearms</label>
+                    <label><input type="checkbox" class="category-filter" value="craft" checked> Crafting</label>
+                    <label><input type="checkbox" class="category-filter" value="survival" checked> Survival</label>
+                    <label><input type="checkbox" class="category-filter" value="passive" checked> Passive</label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Individual Skills</h3>
+                <div id="skillFilters" class="skill-filters">
+                    <p style="color: #999;">Load a character to see skills</p>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <h3>Data Management</h3>
+                <button id="exportBtn" class="btn">Export History</button>
+                <button id="clearBtn" class="btn btn-danger">Clear All History</button>
+                <p style="font-size: 0.85em; color: #666; margin-top: 10px;">
+                    Total records: <span id="recordCount">0</span>
+                </p>
+            </div>
+        </div>
+
+        <div class="stats-panel">
+            <div id="currentStats" class="current-stats">
+                <!-- Populated by JavaScript -->
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <canvas id="skillChart"></canvas>
+            <div id="noDataMessage" class="info-message">
+                <h3>No Data Yet</h3>
+                <p>Click "Start Watching" to auto-load when new data arrives!</p>
+                <p style="margin-top: 10px; font-size: 0.9em;">The server will create <code>update.flag</code> when data is ready.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Skill categories mapping
+        const SKILL_CATEGORIES = {
+            combat: ["Axe", "Blunt", "SmallBlunt", "LongBlade", "SmallBlade", "Spear", "Maintenance"],
+            firearm: ["Firearm", "Aiming", "Reloading"],
+            craft: ["Woodwork", "Cooking", "Electricity", "MetalWelding", "Mechanics", "Tailoring"],
+            survival: ["Farming", "Doctor", "Fishing", "Trapping", "PlantScavenging"],
+            passive: ["Fitness", "Strength", "Agility", "Sprinting", "Lightfoot", "Nimble", "Sneak"]
+        };
+
+        const EXCLUDED_SKILLS = ["Combat", "Crafting", "Survivalist", "Passiv"];
+
+        // Chart colors
+        const CHART_COLORS = [
+            '#667eea', '#764ba2', '#f093fb', '#4facfe',
+            '#43e97b', '#fa709a', '#fee140', '#30cfd0'
+        ];
+
+        let chart = null;
+        let allCharacters = {};
+        let selectedCharacters = [];
+        let selectedSkills = new Set();
+        let watchInterval = null;
+
+        // Load history from localStorage
+        function loadHistory() {
+            const stored = localStorage.getItem('zomboidHistory');
+            return stored ? JSON.parse(stored) : {};
+        }
+
+        // Save history to localStorage
+        function saveHistory(history) {
+            localStorage.setItem('zomboidHistory', JSON.stringify(history));
+        }
+
+        // Check if data has changed
+        function hasDataChanged(playerData, history) {
+            if (!history || history.length === 0) return true;
+
+            const lastEntry = history[history.length - 1];
+            return JSON.stringify(playerData.skills) !== JSON.stringify(lastEntry.skills) ||
+                   playerData.kills !== lastEntry.kills;
+        }
+
+        // Update watch status display
+        function setWatchStatus(status) {
+            const dot = document.getElementById('watchStatus');
+            const text = document.getElementById('watchStatusText');
+
+            dot.className = 'status-dot ' + status;
+
+            switch(status) {
+                case 'watching':
+                    text.textContent = 'Watching for updates...';
+                    break;
+                case 'loading':
+                    text.textContent = 'Loading data...';
+                    break;
+                case 'stopped':
+                    text.textContent = 'Stopped';
+                    break;
+            }
+        }
+
+        // Check for flag file via API
+        async function checkForFlag() {
+            try {
+                const response = await fetch('/api/check-flag');
+                const data = await response.json();
+
+                if (data.ready) {
+                    setWatchStatus('loading');
+                    await loadDataFromServer();
+                    setWatchStatus('watching');
+                }
+            } catch (err) {
+                console.error('Error checking flag:', err);
+            }
+        }
+
+        // Load data from server API
+        async function loadDataFromServer() {
+            try {
+                const response = await fetch('/api/data');
+
+                if (!response.ok) {
+                    const err = await response.json();
+                    console.error('Server error:', err);
+                    return;
+                }
+
+                const playerData = await response.json();
+                updateHistory(playerData);
+                updateDisplay();
+                updateLastUpdateTime();
+
+            } catch (err) {
+                console.error('Error loading data:', err);
+            }
+        }
+
+        // Start watching for flag
+        function startWatching() {
+            if (watchInterval) return;
+
+            const interval = parseInt(document.getElementById('pollInterval').value);
+            setWatchStatus('watching');
+
+            // Check immediately
+            checkForFlag();
+
+            // Then poll at interval
+            watchInterval = setInterval(checkForFlag, interval);
+
+            console.log(`Started watching (interval: ${interval}ms)`);
+        }
+
+        // Stop watching
+        function stopWatching() {
+            if (watchInterval) {
+                clearInterval(watchInterval);
+                watchInterval = null;
+            }
+            setWatchStatus('stopped');
+            console.log('Stopped watching');
+        }
+
+        // Process uploaded file (manual fallback)
+        function processFile(file) {
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const playerData = JSON.parse(e.target.result);
+                    updateHistory(playerData);
+                    updateDisplay();
+                    updateLastUpdateTime();
+                } catch (err) {
+                    alert('Error reading file: ' + err.message);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        // Update history with new player data
+        function updateHistory(playerData) {
+            allCharacters = loadHistory();
+
+            let charactersToProcess = [];
+
+            if (playerData.username) {
+                charactersToProcess.push({
+                    username: playerData.username,
+                    kills: playerData.kills,
+                    skills: playerData.skills
+                });
+            } else {
+                for (const [username, data] of Object.entries(playerData)) {
+                    if (data && typeof data === 'object' && data.skills) {
+                        charactersToProcess.push({
+                            username: username,
+                            kills: data.kills || 0,
+                            skills: data.skills
+                        });
+                    }
+                }
+            }
+
+            let updatedCount = 0;
+
+            charactersToProcess.forEach(charData => {
+                const username = charData.username;
+
+                if (!allCharacters[username]) {
+                    allCharacters[username] = [];
+                }
+
+                if (!hasDataChanged(charData, allCharacters[username])) {
+                    console.log(`No changes detected for ${username}`);
+                    return;
+                }
+
+                const entry = {
+                    timestamp: new Date().toISOString(),
+                    kills: charData.kills,
+                    skills: charData.skills
+                };
+
+                allCharacters[username].push(entry);
+                updatedCount++;
+                console.log(`Updated ${username} - Total records: ${allCharacters[username].length}`);
+            });
+
+            if (updatedCount > 0) {
+                saveHistory(allCharacters);
+                console.log(`Updated ${updatedCount} character(s)`);
+            }
+        }
+
+        // Update all display elements
+        function updateDisplay() {
+            allCharacters = loadHistory();
+            updateCharacterList();
+            updateRecordCount();
+
+            if (selectedCharacters.length > 0) {
+                updateCurrentStats();
+                updateChart();
+            }
+        }
+
+        // Update character list dropdown
+        function updateCharacterList() {
+            const select = document.getElementById('characterSelect');
+            select.innerHTML = '';
+
+            const characterNames = Object.keys(allCharacters);
+
+            if (characterNames.length === 0) {
+                select.innerHTML = '<option value="">No characters loaded yet</option>';
+                return;
+            }
+
+            characterNames.forEach(name => {
+                const option = document.createElement('option');
+                option.value = name;
+                option.textContent = `${name} (${allCharacters[name].length} records)`;
+                select.appendChild(option);
+            });
+
+            if (selectedCharacters.length === 0 && characterNames.length > 0) {
+                select.options[0].selected = true;
+                selectedCharacters = [characterNames[0]];
+                updateSkillFilters();
+            }
+        }
+
+        // Update skill filters based on selected character
+        function updateSkillFilters() {
+            if (selectedCharacters.length === 0) return;
+
+            const username = selectedCharacters[0];
+            const history = allCharacters[username];
+
+            if (!history || history.length === 0) return;
+
+            const latestData = history[history.length - 1];
+            const skills = Object.keys(latestData.skills)
+                .filter(skill => !EXCLUDED_SKILLS.includes(skill));
+
+            const container = document.getElementById('skillFilters');
+            container.innerHTML = '';
+
+            skills.forEach(skill => {
+                const label = document.createElement('label');
+                const checkbox = document.createElement('input');
+                checkbox.type = 'checkbox';
+                checkbox.className = 'skill-filter';
+                checkbox.value = skill;
+                checkbox.checked = true;
+
+                label.appendChild(checkbox);
+                label.appendChild(document.createTextNode(` ${skill}`));
+                container.appendChild(label);
+
+                selectedSkills.add(skill);
+            });
+        }
+
+        // Update current stats display
+        function updateCurrentStats() {
+            if (selectedCharacters.length === 0) return;
+
+            const username = selectedCharacters[0];
+            const history = allCharacters[username];
+
+            if (!history || history.length === 0) return;
+
+            const latestData = history[history.length - 1];
+            const container = document.getElementById('currentStats');
+            container.innerHTML = `
+                <div class="stat-card">
+                    <h4>${username}</h4>
+                    <div class="value">${latestData.kills}</div>
+                    <div class="label">Zombie Kills</div>
+                </div>
+            `;
+
+            const skills = Object.entries(latestData.skills)
+                .filter(([name]) => !EXCLUDED_SKILLS.includes(name))
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5);
+
+            skills.forEach(([name, level]) => {
+                if (level > 0) {
+                    const card = document.createElement('div');
+                    card.className = 'stat-card';
+                    card.innerHTML = `
+                        <h4>${name}</h4>
+                        <div class="value">${level}</div>
+                        <div class="label">Skill Level</div>
+                    `;
+                    container.appendChild(card);
+                }
+            });
+        }
+
+        // Update chart
+        function updateChart() {
+            const comparisonMode = document.getElementById('comparisonMode').checked;
+
+            if (selectedCharacters.length === 0) {
+                document.getElementById('noDataMessage').style.display = 'block';
+                if (chart) chart.destroy();
+                return;
+            }
+
+            document.getElementById('noDataMessage').style.display = 'none';
+
+            const datasets = [];
+
+            selectedCharacters.forEach((username, charIndex) => {
+                const history = allCharacters[username];
+
+                if (!history || history.length < 2) return;
+
+                const timestamps = history.map(entry => new Date(entry.timestamp).toLocaleDateString());
+
+                selectedSkills.forEach((skill, skillIndex) => {
+                    const values = history.map(entry => entry.skills[skill] || 0);
+
+                    if (Math.max(...values) === 0) return;
+
+                    const colorIndex = comparisonMode ? charIndex : datasets.length;
+                    const label = comparisonMode ? `${username} - ${skill}` : skill;
+
+                    datasets.push({
+                        label: label,
+                        data: values,
+                        borderColor: CHART_COLORS[colorIndex % CHART_COLORS.length],
+                        backgroundColor: CHART_COLORS[colorIndex % CHART_COLORS.length] + '20',
+                        tension: 0.4
+                    });
+                });
+            });
+
+            if (datasets.length === 0) {
+                document.getElementById('noDataMessage').innerHTML = '<h3>No skill progression data yet</h3><p>Need at least 2 data points per character to show graphs.</p>';
+                document.getElementById('noDataMessage').style.display = 'block';
+                if (chart) chart.destroy();
+                return;
+            }
+
+            const ctx = document.getElementById('skillChart').getContext('2d');
+
+            if (chart) chart.destroy();
+
+            const firstChar = selectedCharacters[0];
+            const labels = allCharacters[firstChar].map(entry =>
+                new Date(entry.timestamp).toLocaleDateString()
+            );
+
+            chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: datasets
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Skill Progression Over Time',
+                            font: { size: 18 }
+                        },
+                        legend: {
+                            display: true,
+                            position: 'top'
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: 'Skill Level'
+                            }
+                        },
+                        x: {
+                            title: {
+                                display: true,
+                                text: 'Date'
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Update record count
+        function updateRecordCount() {
+            let total = 0;
+            Object.values(allCharacters).forEach(history => {
+                total += history.length;
+            });
+            document.getElementById('recordCount').textContent = total;
+        }
+
+        // Update last update time
+        function updateLastUpdateTime() {
+            document.getElementById('lastUpdate').textContent = new Date().toLocaleString();
+        }
+
+        // Export history as JSON
+        function exportHistory() {
+            const dataStr = JSON.stringify(allCharacters, null, 2);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(dataBlob);
+
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `zomboid-history-${new Date().toISOString().split('T')[0]}.json`;
+            link.click();
+
+            URL.revokeObjectURL(url);
+        }
+
+        // Clear all history
+        function clearHistory() {
+            if (confirm('Are you sure you want to clear ALL character history? This cannot be undone!')) {
+                localStorage.removeItem('zomboidHistory');
+                allCharacters = {};
+                selectedCharacters = [];
+                selectedSkills.clear();
+                updateDisplay();
+                if (chart) chart.destroy();
+                document.getElementById('noDataMessage').style.display = 'block';
+                alert('All history cleared!');
+            }
+        }
+
+        // Setup event listeners
+        function setupEventListeners() {
+            // Auto-load controls
+            document.getElementById('startWatchBtn').addEventListener('click', startWatching);
+            document.getElementById('stopWatchBtn').addEventListener('click', stopWatching);
+            document.getElementById('manualLoadBtn').addEventListener('click', loadDataFromServer);
+
+            document.getElementById('pollInterval').addEventListener('change', () => {
+                if (watchInterval) {
+                    stopWatching();
+                    startWatching();
+                }
+            });
+
+            // File drop zone
+            const dropZone = document.getElementById('dropZone');
+            const fileInput = document.getElementById('fileInput');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('drag-over');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('drag-over');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('drag-over');
+
+                const files = e.dataTransfer.files;
+                if (files.length > 0) {
+                    processFile(files[0]);
+                }
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    processFile(e.target.files[0]);
+                }
+            });
+
+            // Character selection
+            document.getElementById('characterSelect').addEventListener('change', (e) => {
+                selectedCharacters = Array.from(e.target.selectedOptions).map(opt => opt.value);
+                updateSkillFilters();
+                updateCurrentStats();
+                updateChart();
+            });
+
+            // Comparison mode
+            document.getElementById('comparisonMode').addEventListener('change', updateChart);
+
+            // Category filters
+            document.querySelectorAll('.category-filter').forEach(checkbox => {
+                checkbox.addEventListener('change', (e) => {
+                    const category = e.target.value;
+                    const skills = SKILL_CATEGORIES[category];
+                    const checked = e.target.checked;
+
+                    document.querySelectorAll('.skill-filter').forEach(skillCheckbox => {
+                        if (skills.includes(skillCheckbox.value)) {
+                            skillCheckbox.checked = checked;
+                            if (checked) {
+                                selectedSkills.add(skillCheckbox.value);
+                            } else {
+                                selectedSkills.delete(skillCheckbox.value);
+                            }
+                        }
+                    });
+
+                    updateChart();
+                });
+            });
+
+            // Individual skill filters
+            document.getElementById('skillFilters').addEventListener('change', (e) => {
+                if (e.target.classList.contains('skill-filter')) {
+                    if (e.target.checked) {
+                        selectedSkills.add(e.target.value);
+                    } else {
+                        selectedSkills.delete(e.target.value);
+                    }
+                    updateChart();
+                }
+            });
+
+            // Export and clear buttons
+            document.getElementById('exportBtn').addEventListener('click', exportHistory);
+            document.getElementById('clearBtn').addEventListener('click', clearHistory);
+        }
+
+        // Initialize
+        setupEventListeners();
+        updateDisplay();
+        setWatchStatus('stopped');
+    </script>
+</body>
+</html>

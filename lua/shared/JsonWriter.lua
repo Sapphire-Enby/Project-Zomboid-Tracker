@@ -95,6 +95,11 @@ function JsonWriter.toFile(playerRecords)
     writer:write(jsonString)
     writer:close()
 
+    -- Alongside the playerdata.json file, a flag file named updated.flag
+    -- is created/updated to signal that new data is available.
+    local flagWriter = getFileWriter("updated.flag", true, false)
+    flagWriter.close()
+
     print("[PlayerTest] Data exported to: " .. getDir() .. "/playerdata.json")
     return true
 end
