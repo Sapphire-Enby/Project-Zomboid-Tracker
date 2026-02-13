@@ -1,0 +1,5 @@
+name=Project-Zomboid-Tracker
+id=ProjectZomboidTracker
+description= logs players stats and kills into JSON file for Graphing
+url=https://github.com/Sapphire-Enby/Project-Zomboid-Tracker
+poster=poster.png

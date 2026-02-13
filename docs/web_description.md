@@ -76,22 +76,8 @@ server.py (port 8080)
 
 ## Expected playerdata.json Format
 
-Supports two formats:
+Expected format:
 
-**Single player:**
-```json
-{
-  "username": "PlayerName",
-  "kills": 150,
-  "skills": {
-    "Axe": 3,
-    "Cooking": 5,
-    "Fitness": 2
-  }
-}
-```
-
-**Multi-player:**
 ```json
 {
   "PlayerOne": {

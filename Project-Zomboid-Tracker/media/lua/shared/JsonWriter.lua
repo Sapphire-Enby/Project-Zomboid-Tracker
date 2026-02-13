@@ -85,23 +85,22 @@ function JsonWriter.encode(playerRecords)
     -- repeated concatenation which would be O(n^2)
     return table.concat(result)
 end
+
 -- ==== END JSON ENCODER ====
 function JsonWriter.toFile(playerRecords)
     -- Use inline JSON encoder
     local jsonString = JsonWriter.encode(playerRecords)
 
-    -- Write using PZ's file API
-    local writer = getFileWriter("playerdata.json", true, false)
+    -- Write using PZ's Modfile API to ensure it goes to the output folder in root of the mod
+    local writer = getModFileWriter("ProjectZomboidTracker", "output/playerdata.json", true, false)
     writer:write(jsonString)
     writer:close()
 
     -- Alongside the playerdata.json file, a flag file named updated.flag
     -- is created/updated to signal that new data is available.
-    local flagWriter = getFileWriter("updated.flag", true, false)
-    flagWriter.close()
+    local flagWriter = getModFileWriter("ProjectZomboidTracker", "output/updated.flag", true, false)
+    flagWriter:close()
 
-    print("[PlayerTest] Data exported to: " .. getDir() .. "/playerdata.json")
+    print("[PlayerTest] Data and Flag exported to: mods/ProjectZomboidTracker/output ")
     return true
 end
-
-return JsonWriter

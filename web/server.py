@@ -41,8 +41,8 @@ from pathlib import Path
 
 # Configuration
 PORT = 8080
-FLAG_FILE = "update.flag"
-DATA_FILE = "playerdata.json"
+FLAG_FILE = "output/update.flag"
+DATA_FILE = "output/playerdata.json"
 
 
 ## Helper Classes
@@ -129,7 +129,8 @@ class TrackerHandler(http.server.SimpleHTTPRequestHandler):
 
     def log_message(self, format, *args):
         """Custom logging to reduce noise."""
-        if "/api/" in args[0]:
+        # Added check to restrict to API calls after missing favicon.ico blew up the console
+        if args and isinstance(args[0], str) and "/api/" in args[0]:
             print(f"[API] {args[0]}")
 
 

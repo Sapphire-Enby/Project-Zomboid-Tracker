@@ -542,21 +542,13 @@
 
             let charactersToProcess = [];
 
-            if (playerData.username) {
-                charactersToProcess.push({
-                    username: playerData.username,
-                    kills: playerData.kills,
-                    skills: playerData.skills
-                });
-            } else {
-                for (const [username, data] of Object.entries(playerData)) {
-                    if (data && typeof data === 'object' && data.skills) {
-                        charactersToProcess.push({
-                            username: username,
-                            kills: data.kills || 0,
-                            skills: data.skills
-                        });
-                    }
+            for (const [username, data] of Object.entries(playerData)) {
+                if (data && typeof data === 'object' && data.skills) {
+                    charactersToProcess.push({
+                        username: username,
+                        kills: data.kills || 0,
+                        skills: data.skills
+                    });
                 }
             }
 
