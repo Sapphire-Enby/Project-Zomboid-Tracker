@@ -41,7 +41,7 @@ from pathlib import Path
 
 # Configuration
 PORT = 8080
-FLAG_FILE = "output/update.flag"
+FLAG_FILE = "output/updated.flag"
 DATA_FILE = "output/playerdata.json"
 
 

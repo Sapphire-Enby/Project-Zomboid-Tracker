@@ -28,7 +28,7 @@ local datascrape = {}
         for i=0, allperks:size()-1 do -- one by one, get each perk from the list, and check the player's level in that perk
             local perk = allperks:get(i)
 
-            if perk then
+            if perk and perk ~= null then
                 local perkName = perk:getType()     -- will return the common name of the perk e.g. "Strength" or "Cooking"
                 local level = p:getPerkLevel(perk)  -- will return the level of that perk for the player
 

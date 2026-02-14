@@ -104,3 +104,5 @@ function JsonWriter.toFile(playerRecords)
     print("[PlayerTest] Data and Flag exported to: mods/ProjectZomboidTracker/output ")
     return true
 end
+
+return JsonWriter
