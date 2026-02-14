@@ -415,6 +415,15 @@
         let selectedSkills = new Set();
         let watchInterval = null;
 
+        // Strip saveName:: prefix for display
+        function getDisplayName(storageKey) {
+            const parts = storageKey.split('::');
+            if (parts.length === 2) {
+                return `${parts[1]} (${parts[0]})`;
+            }
+            return storageKey;
+        }
+
         // Load history from localStorage
         function loadHistory() {
             const stored = localStorage.getItem('zomboidHistory');
@@ -540,6 +549,11 @@
         function updateHistory(playerData) {
             allCharacters = loadHistory();
 
+            // Extract metadata before player loop
+            const metadata = playerData.metadata || {};
+            const gameDate = metadata.gameDate;
+            const saveName = metadata.saveName || "default";
+
             let charactersToProcess = [];
 
             for (const [username, data] of Object.entries(playerData)) {
@@ -555,26 +569,27 @@
             let updatedCount = 0;
 
             charactersToProcess.forEach(charData => {
-                const username = charData.username;
+                // Namespace character keys using saveName to avoid collisions across saves
+                const storageKey = saveName + "::" + charData.username;
 
-                if (!allCharacters[username]) {
-                    allCharacters[username] = [];
+                if (!allCharacters[storageKey]) {
+                    allCharacters[storageKey] = [];
                 }
 
-                if (!hasDataChanged(charData, allCharacters[username])) {
-                    console.log(`No changes detected for ${username}`);
+                if (!hasDataChanged(charData, allCharacters[storageKey])) {
+                    console.log(`No changes detected for ${charData.username}`);
                     return;
                 }
 
                 const entry = {
-                    timestamp: new Date().toISOString(),
+                    timestamp: gameDate || new Date().toISOString(),
                     kills: charData.kills,
                     skills: charData.skills
                 };
 
-                allCharacters[username].push(entry);
+                allCharacters[storageKey].push(entry);
                 updatedCount++;
-                console.log(`Updated ${username} - Total records: ${allCharacters[username].length}`);
+                console.log(`Updated ${charData.username} (${saveName}) - Total records: ${allCharacters[storageKey].length}`);
             });
 
             if (updatedCount > 0) {
@@ -610,7 +625,9 @@
             characterNames.forEach(name => {
                 const option = document.createElement('option');
                 option.value = name;
-                option.textContent = `${name} (${allCharacters[name].length} records)`;
+                // Strip saveName:: prefix for display, show save name in parentheses
+                const displayName = getDisplayName(name);
+                option.textContent = `${displayName} (${allCharacters[name].length} records)`;
                 select.appendChild(option);
             });
 
@@ -664,9 +681,10 @@
 
             const latestData = history[history.length - 1];
             const container = document.getElementById('currentStats');
+            const displayName = getDisplayName(username);
             container.innerHTML = `
                 <div class="stat-card">
-                    <h4>${username}</h4>
+                    <h4>${displayName}</h4>
                     <div class="value">${latestData.kills}</div>
                     <div class="label">Zombie Kills</div>
                 </div>
@@ -710,7 +728,7 @@
 
                 if (!history || history.length < 2) return;
 
-                const timestamps = history.map(entry => new Date(entry.timestamp).toLocaleDateString());
+                const timestamps = history.map(entry => entry.timestamp);
 
                 selectedSkills.forEach((skill, skillIndex) => {
                     const values = history.map(entry => entry.skills[skill] || 0);
@@ -718,7 +736,7 @@
                     if (Math.max(...values) === 0) return;
 
                     const colorIndex = comparisonMode ? charIndex : datasets.length;
-                    const label = comparisonMode ? `${username} - ${skill}` : skill;
+                    const label = comparisonMode ? `${getDisplayName(username)} - ${skill}` : skill;
 
                     datasets.push({
                         label: label,
@@ -742,9 +760,7 @@
             if (chart) chart.destroy();
 
             const firstChar = selectedCharacters[0];
-            const labels = allCharacters[firstChar].map(entry =>
-                new Date(entry.timestamp).toLocaleDateString()
-            );
+            const labels = allCharacters[firstChar].map(entry => entry.timestamp);
 
             chart = new Chart(ctx, {
                 type: 'line',
@@ -777,7 +793,7 @@
                         x: {
                             title: {
                                 display: true,
-                                text: 'Date'
+                                text: 'Game Date'
                             }
                         }
                     }

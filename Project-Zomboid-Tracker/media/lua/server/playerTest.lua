@@ -67,7 +67,7 @@ local function processPlayers()
     end
 end
 
-local function writeRecordsToJson()
+local function writeRecordsToJson(metadata)
     local hasRecords = false -- using next to check if table is non-empty threw an error
     for _ in pairs(playerRecords) do
         hasRecords = true
@@ -75,7 +75,7 @@ local function writeRecordsToJson()
     end
 
     if hasRecords then  -- avoid writing empty data
-        JsonWriter.toFile(playerRecords)
+        JsonWriter.toFile(playerRecords, metadata)
     else
         print("[PlayerTest] No player records to write.")
     end
@@ -84,7 +84,13 @@ end
 local function onEvent()
     getPlayersToProcess()  -- Collect players based on game mode
     processPlayers()       -- Extract data and populate playerRecords
-    writeRecordsToJson()   -- Write the collected data to JSON
+
+    local metadata = {
+        gameDate = datascrape.getGameDateTime(),
+        saveName = datascrape.getSaveName()
+    }
+
+    writeRecordsToJson(metadata)   -- Write the collected data to JSON
 end
 -- some off the top events to hook into for data capture
 for _, event in ipairs({Events.OnCreatePlayer,Events.OnPlayerDeath,Events.EveryHours}) do

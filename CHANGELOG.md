@@ -3,19 +3,20 @@
 ## [Unreleased]
 
 ### Added
-- `Project-Zomboid-Tracker/` - Lua files reorganised into a proper Build 41 mod structure with `mod.info`, `poster.png`, and `media/lua/server|shared/` layout so the mod can be installed directly.
-- `web/README.md` - Documents the symlink setup required to point the web server's `output/` folder at the mod's output directory in the Zomboid save location.
+- `datascrape.lua` - `getGameDateTime()` function: reads in-game date/time via `getGameTime()` singleton, formats as `"Jul 9, 14:30"` for chart X-axis labels.
+- `datascrape.lua` - `getSaveName()` function: returns save folder name via `getWorld():getWorld()`, falls back to `getServerName()` for multiplayer, then `"unknown"`.
+- `playerTest.lua` - Builds a `metadata` table with `gameDate` and `saveName` on each event, passes it through to `JsonWriter.toFile()`.
+- `JsonWriter.lua` - Accepts optional `metadata` parameter in `encode()` and `toFile()`, writes a top-level `"metadata"` object (gameDate, saveName) as the first entry in `playerdata.json` before player records.
+- `zomboid-tracker.html` - `getDisplayName()` helper strips `saveName::` prefix and shows character names as `"PlayerName (saveName)"` in the UI.
+- `zomboid-tracker.html` - Character keys in localStorage are now namespaced as `saveName::username` to prevent collisions across different saves.
 
 ### Changed
-- `web/server.py` - `FLAG_FILE` and `DATA_FILE` paths updated from root directory to `output/` subdirectory, aligning with the symlink-based file handoff from the mod.
-- `web/server.py` - Renamed flag file from `update.flag` to `updated.flag` to match the filename written by the Lua mod.
-- `web/server.py` - Fixed crash in `log_message()` caused by empty `args` on `favicon.ico` requests; added guard before checking `args[0]`.
-- `web/zomboid-tracker.html` - Removed single-player JSON format detection. The old format (flat object with top-level `username` key) is no longer supported; the frontend now only processes the multiplayer format (top-level keys are player names). Format detection logic simplified accordingly.
-- `docs/web_description.md` - Updated expected `playerdata.json` format section to document only the multiplayer format.
-- `Project-Zomboid-Tracker/media/lua/shared/JsonWriter.lua` - Added `return JsonWriter` at end of file for proper Lua module export.
-- `Project-Zomboid-Tracker/media/lua/shared/datascrape.lua` - Added `perk ~= null` guard to perk iteration to prevent errors from Java null perk entries.
+- `playerTest.lua` - `writeRecordsToJson()` now accepts and passes a `metadata` parameter to `JsonWriter.toFile()`.
+- `playerTest.lua` - `onEvent()` constructs metadata table from `datascrape.getGameDateTime()` and `datascrape.getSaveName()` before writing records.
+- `zomboid-tracker.html` - `updateHistory()` extracts `metadata.gameDate` and `metadata.saveName` from incoming JSON; uses game date as history entry timestamp instead of `new Date().toISOString()`.
+- `zomboid-tracker.html` - Chart labels use `entry.timestamp` directly instead of wrapping with `new Date().toLocaleDateString()`.
+- `zomboid-tracker.html` - X-axis label changed from "Date" to "Game Date".
+- `zomboid-tracker.html` - Stat cards and comparison mode labels use `getDisplayName()` for cleaner display.
 
-### Removed
-- `lua/server/playerTest.lua` - Superseded by `Project-Zomboid-Tracker/media/lua/server/playerTest.lua` in the proper mod structure.
-- `lua/shared/JsonWriter.lua` - Superseded by `Project-Zomboid-Tracker/media/lua/shared/JsonWriter.lua`.
-- `lua/shared/datascrape.lua` - Superseded by `Project-Zomboid-Tracker/media/lua/shared/datascrape.lua`.
+### Fixed
+- `datascrape.lua` - Added `@diagnostic` suppress for `null` global (Java nil equivalent) with explanatory comment on the perk validation check.

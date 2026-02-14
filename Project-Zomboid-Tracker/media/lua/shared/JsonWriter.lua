@@ -1,5 +1,5 @@
 local JsonWriter = {}
-function JsonWriter.encode(playerRecords)
+function JsonWriter.encode(playerRecords, metadata)
     -- We build the JSON string piece by piece using a table of string fragments.
     -- This is more efficient than repeated string concatenation in Lua because
     -- strings are immutable - each concat creates a new string object.
@@ -9,6 +9,18 @@ function JsonWriter.encode(playerRecords)
     -- Begin the root JSON object - this will contain all characters
     -- The newline adds formatting for human readability
     table.insert(result, "{\n")
+
+    -- Write metadata object as the first entry if provided
+    if metadata then
+        table.insert(result, '  "metadata": {\n')
+        table.insert(result, '    "gameDate": "')
+        table.insert(result, tostring(metadata.gameDate or ""))
+        table.insert(result, '",\n')
+        table.insert(result, '    "saveName": "')
+        table.insert(result, tostring(metadata.saveName or ""))
+        table.insert(result, '"\n')
+        table.insert(result, '  },\n')
+    end
 
     -- Track whether we're on the first character entry.
     -- JSON requires commas BETWEEN items, not after the last one.
@@ -87,9 +99,9 @@ function JsonWriter.encode(playerRecords)
 end
 
 -- ==== END JSON ENCODER ====
-function JsonWriter.toFile(playerRecords)
+function JsonWriter.toFile(playerRecords, metadata)
     -- Use inline JSON encoder
-    local jsonString = JsonWriter.encode(playerRecords)
+    local jsonString = JsonWriter.encode(playerRecords, metadata)
 
     -- Write using PZ's Modfile API to ensure it goes to the output folder in root of the mod
     local writer = getModFileWriter("ProjectZomboidTracker", "output/playerdata.json", true, false)
