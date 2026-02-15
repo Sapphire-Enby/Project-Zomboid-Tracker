@@ -1,5 +1,5 @@
 local JsonWriter = {}
-function JsonWriter.encode(playerRecords)
+function JsonWriter.encode(playerRecords, metadata)
     -- We build the JSON string piece by piece using a table of string fragments.
     -- This is more efficient than repeated string concatenation in Lua because
     -- strings are immutable - each concat creates a new string object.
@@ -9,6 +9,18 @@ function JsonWriter.encode(playerRecords)
     -- Begin the root JSON object - this will contain all characters
     -- The newline adds formatting for human readability
     table.insert(result, "{\n")
+
+    -- Write metadata object as the first entry if provided
+    if metadata then
+        table.insert(result, '  "metadata": {\n')
+        table.insert(result, '    "gameDate": "')
+        table.insert(result, tostring(metadata.gameDate or ""))
+        table.insert(result, '",\n')
+        table.insert(result, '    "saveName": "')
+        table.insert(result, tostring(metadata.saveName or ""))
+        table.insert(result, '"\n')
+        table.insert(result, '  },\n')
+    end
 
     -- Track whether we're on the first character entry.
     -- JSON requires commas BETWEEN items, not after the last one.
@@ -85,22 +97,23 @@ function JsonWriter.encode(playerRecords)
     -- repeated concatenation which would be O(n^2)
     return table.concat(result)
 end
--- ==== END JSON ENCODER ====
-function JsonWriter.toFile(playerRecords)
-    -- Use inline JSON encoder
-    local jsonString = JsonWriter.encode(playerRecords)
 
-    -- Write using PZ's file API
-    local writer = getFileWriter("playerdata.json", true, false)
+-- ==== END JSON ENCODER ====
+function JsonWriter.toFile(playerRecords, metadata)
+    -- Use inline JSON encoder
+    local jsonString = JsonWriter.encode(playerRecords, metadata)
+
+    -- Write using PZ's Modfile API to ensure it goes to the output folder in root of the mod
+    local writer = getModFileWriter("ProjectZomboidTracker", "output/playerdata.json", true, false)
     writer:write(jsonString)
     writer:close()
 
     -- Alongside the playerdata.json file, a flag file named updated.flag
     -- is created/updated to signal that new data is available.
-    local flagWriter = getFileWriter("updated.flag", true, false)
-    flagWriter.close()
+    local flagWriter = getModFileWriter("ProjectZomboidTracker", "output/updated.flag", true, false)
+    flagWriter:close()
 
-    print("[PlayerTest] Data exported to: " .. getDir() .. "/playerdata.json")
+    print("[PlayerTest] Data and Flag exported to: mods/ProjectZomboidTracker/output ")
     return true
 end
 
